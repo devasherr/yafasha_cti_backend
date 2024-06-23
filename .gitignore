@@ -12,3 +12,4 @@ __pycache__
 # the modles
 classifier
 ner_model
+sentiment
