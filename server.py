@@ -24,16 +24,17 @@ ner_model_directory = "./ner_model/content/outputs/checkpoint-82-epoch-2"
 ner_model = NERModel('bert', ner_model_directory, use_cuda=False)
 
 @app.post("/ner")
-def nerPredict():
+def mainNerPredict():
     data = request.get_json()
     text = data.get("text")
 
     if not text:
         return jsonify({"error": "no text provided"}), 400
-        
-    # Make prediction using the NER model
+    return jsonify(nerPredict(text)), 200
+    
+def nerPredict(text):
     prediction, model_ouput = ner_model.predict([text])
-    return jsonify(prediction), 200
+    return prediction[0]
 
 # !CLASSIFIER
 classifier_model_directory = "./classifier/distilbert/content/attack_classifier"
@@ -196,5 +197,12 @@ def upload_file():
         for data in filtered_data:
             attackTypeCount[classifier(data)] += 1
 
-        return jsonify({"filtered_data": attackTypeCount}) # temporary return
+        # get count of ner entities
+        nerEntityCount = defaultdict(int)
+        for data in filtered_data:
+            for ner_result in nerPredict(data):
+                for key in ner_result:
+                    nerEntityCount[ner_result[key]] += 1
+
+        return jsonify({"filtered_data": nerEntityCount}) # temporary return
         
