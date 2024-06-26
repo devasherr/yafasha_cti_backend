@@ -11,6 +11,7 @@ import pandas as pd
 import re
 import csv
 from io import StringIO
+from collections import defaultdict
 
 app = Flask(__name__)
 CORS(app)
@@ -41,13 +42,15 @@ classifier_model_directory = "./classifier/distilbert/content/attack_classifier"
 classifier_tokenizer = DistilBertTokenizer.from_pretrained(classifier_model_directory, local_files_only=True)
 classifier_model = DistilBertForSequenceClassification.from_pretrained(classifier_model_directory)
 @app.post("/classifier")
-def classifier():
+def main_classifier():
     data = request.get_json()
     text = data.get("text")
 
     if not text:
         return jsonify({"error": "no text provided"}), 400
+    return jsonify(classifier(text)), 200
     
+def classifier(text):
     # Tokenize the input text
     encoding = classifier_tokenizer(text, return_tensors='pt')
 
@@ -72,13 +75,13 @@ def classifier():
     from sklearn.preprocessing import MultiLabelBinarizer
 
     # Dummy label list to fit the binarizer (replace with actual labels if available)
-    label_list = [["Phishing and Social Engineering"], ["APT"], ["Supply Chain Attack"], ["Zero-day Exploit"], ["Ransomware"], ["DDoS"], ["Data Breach"]]
+    label_list = [["Phishing_and_Social_Engineering"], ["APT"], ["Supply_Chain_Attack"], ["Zero-day_Exploit"], ["Ransomware"], ["DDoS"], ["Data_Breach"]]
     multilabel = MultiLabelBinarizer()
     multilabel.fit(label_list)
 
     # Inverse transform the predictions to get the actual labels
     predicted_labels = multilabel.inverse_transform(preds.reshape(1, -1))
-    return jsonify(predicted_labels), 200
+    return predicted_labels[0][0]
 
 # !SEMTIMENT
 sentiment_model_directory = "./sentiment"
@@ -187,5 +190,11 @@ def upload_file():
         filtered_data = [data for data in cleaned_data if sentiment(data) == "Cyber-Related"]
         filtered_count = len(filtered_data)
 
-        return jsonify({"filtered_data": filtered_data}) # temporary return
+        # get count of classified attacks
+        attackTypeCount = defaultdict(int)
+
+        for data in filtered_data:
+            attackTypeCount[classifier(data)] += 1
+
+        return jsonify({"filtered_data": attackTypeCount}) # temporary return
         
