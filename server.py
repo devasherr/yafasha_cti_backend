@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from markupsafe import escape
 from simpletransformers.ner import NERModel
 import torch
@@ -6,8 +7,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, BertTokenizer, BertModel
 import numpy as np
+import pandas as pd
+import re
+import csv
+from io import StringIO
 
 app = Flask(__name__)
+CORS(app)
 
 # !NER
 # Path to extracted models
@@ -82,13 +88,15 @@ sentiment_tokenizer = BertTokenizer.from_pretrained(sentiment_model_directory, l
 sentiment_model = BertTokenizer.from_pretrained(sentiment_model_directory)
 
 @app.post("/sentiment")
-def sentiment():
+def main_sentiment():
     data = request.get_json()
     text = data.get("text")
 
     if not text:
         return jsonify({"error": "no text provided"}), 400
-    
+    return jsonify(sentiment(text))
+
+def sentiment(text):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # Define the class names
     class_names = ['Non-Cyber Related', 'Cyber-Related']
@@ -136,4 +144,48 @@ def sentiment():
             _, prediction = torch.max(output, dim=1)
             return class_names[prediction]
         
-    return jsonify(predict_sentiment(text))
+    return predict_sentiment(text)
+
+#! AUTOMATED
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        if 'the_file' not in request.files:
+            return 'No file part'
+        
+        f = request.files['the_file']
+        
+        if f.filename == '':
+            return 'No selected file'
+        
+        if not f:
+            return jsonify({"error": "no text provided"}), 400
+        
+        file_content = f.read().decode('utf-8')
+        csv_reader = csv.DictReader(StringIO(file_content))
+        
+        specific_column = 'text'
+        extracted_data = []
+        
+        for row in csv_reader:
+            if specific_column in row:
+                extracted_data.append(row[specific_column])
+
+        def clean_text(Tweet):
+            if isinstance(Tweet, str):
+                # Remove hyperlinks
+                Tweet = re.sub(r'http\S+', '', Tweet)
+                # Remove non-alphanumeric characters
+                Tweet = re.sub(r'\W+', ' ', Tweet)
+            else:
+                Tweet = ""  # If the entry is not a string, return an empty string
+            return Tweet
+
+        cleaned_data = [clean_text(data) for data in extracted_data]
+        unfiltered_count = len(cleaned_data)
+
+        filtered_data = [data for data in cleaned_data if sentiment(data) == "Cyber-Related"]
+        filtered_count = len(filtered_data)
+
+        return jsonify({"filtered_data": filtered_data}) # temporary return
+        
