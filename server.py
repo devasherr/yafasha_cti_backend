@@ -49,6 +49,7 @@ def main_classifier():
 
     if not text:
         return jsonify({"error": "no text provided"}), 400
+    
     return jsonify(classifier(text)), 200
     
 def classifier(text):
@@ -84,7 +85,7 @@ def classifier(text):
     predicted_labels = multilabel.inverse_transform(preds.reshape(1, -1))
     return predicted_labels[0][0]
 
-# !SEMTIMENT
+# !SENTIMENT
 sentiment_model_directory = "./sentiment"
 
 # Load the tokenizer and model
@@ -202,7 +203,10 @@ def upload_file():
         for data in filtered_data:
             for ner_result in nerPredict(data):
                 for key in ner_result:
-                    nerEntityCount[ner_result[key]] += 1
+                    nerEntityCount[ner_result[key]] += 1    
 
-        return jsonify({"filtered_data": nerEntityCount}) # temporary return
-        
+        return {
+                "sentiment": { "related": filtered_count,"unrelated": unfiltered_count - filtered_count},
+                "classifier": attackTypeCount,
+                "ner": nerEntityCount
+        }
