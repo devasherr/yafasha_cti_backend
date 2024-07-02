@@ -37,7 +37,9 @@ def nerPredict(text):
     return prediction[0]
 
 # !CLASSIFIER
-classifier_model_directory = "./classifier/distilbert/content/attack_classifier"
+# classifier_model_directory = "./classifier/distilbert/content/attack_classifier"
+# classifier_model_directory = "./classifier/new_model/content/attack_classifier"
+classifier_model_directory = "./classifier/updated_model/content/attack_classifier"
 
 # Load the tokenizer and model
 classifier_tokenizer = DistilBertTokenizer.from_pretrained(classifier_model_directory, local_files_only=True)
@@ -76,8 +78,7 @@ def classifier(text):
     # Assuming you have the `multilabel` from your previous code to get the class names
     from sklearn.preprocessing import MultiLabelBinarizer
 
-    # Dummy label list to fit the binarizer (replace with actual labels if available)
-    label_list = [["Phishing_and_Social_Engineering"], ["APT"], ["Supply_Chain_Attack"], ["Zero-day_Exploit"], ["Ransomware"], ["DDoS"], ["Data_Breach"]]
+    label_list = [["Phishing_and_Social_Engineering"], ["OTHER"], ["Supply_Chain_Attack"], ["Zero_day_Exploit"], ["Ransomware"], ["DDoS"], ["Data_Breach"]]
     multilabel = MultiLabelBinarizer()
     multilabel.fit(label_list)
 
